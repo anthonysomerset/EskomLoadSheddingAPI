@@ -1,6 +1,8 @@
 from chalice import Chalice
 import requests
 from bs4 import BeautifulSoup
+from datetime import datetime
+import json
 
 app = Chalice(app_name='EskomLoadShedding')
 
@@ -29,10 +31,47 @@ def get_schedule(area_id,stage):
     data_raw = requests.get(uri)
     soup = BeautifulSoup(data_raw.text, 'html.parser')
     days = soup.find_all(class_='scheduleDay')
-    print(days[0])
-    for item in days[0].find_all('div'):
-        print(item.text)
-    #print(soup.prettify())
+    # we need current date for to exclude schedules in the past
+    now = datetime.now()
+
+    data_dict = {}
+
+    for day in days:
+        day_obj = day.find_all('div')
+        #Wed, 11 Mar
+        date_str = str(now.year) + " " + day_obj[0].text.strip()
+        date = datetime.strptime(date_str, '%Y %a, %d %b')
+        #print("date: ", date)
+        #print("items-----")
+        # ITEM 0 is date
+        # ITEM 1... is windows
+        shedding_list = day.find_all('div')
+
+        #SKIP first item in each list - its the date we grabbed it above - here is purely iterating over the actual load shedding windows
+        shedding_iterator = iter(shedding_list)
+        next(shedding_iterator)
+
+        # day list
+        day_dict = {}
+        count = 1
+        for item in shedding_iterator:
+
+            #build a list of starts and stops
+            # item 0 and 2 is start and end
+            # TODO convert the strings to times
+            shedding_window =  item.text.strip().split()
+            day_dict[count] = {'start': shedding_window[0], 'end': shedding_window[2]}
+            #print(item.text.strip().split())
+            count += 1
+        #print(day_dict)
+        data_dict[date_str] = day_dict
+    #print(data_dict)
+    #return json.dumps(data_dict)
+    return data_dict
+
+        #print(soup.prettify())
+        # add the list to data_dict with date as key
+    #output data_dict as json
 
 
 @app.route('/')
@@ -46,6 +85,10 @@ def current_stage():
     stage = get_stage()
     return stage
 
+#get full available schedule for an area and stage
+@app.route('/Schedule/{area_id}/{stage}')
+def get_full_schedule(area_id,stage):
+    return get_schedule(area_id,stage)
 
 #Gets the Next Shedding window for a given Area ID and Load Shedding Stage
 
