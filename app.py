@@ -65,8 +65,79 @@ def get_schedule(area_id,stage):
 
     return data_dict
 
+def next_shedding_window(area_id,stage):
+    #get schedule for the area and stage
+    # iterate over dates/windows until we have a suitable match and break
+    # pull out start time and end time and calculate
+    # if current time < start time then calc hours
+    # if current time > start time and less than end time then 0
+    # if current time > start time and > end time, look for next window
+    #return an object of various parameters:
+    # date, start time, end time, hours until, minutes until, seconds until
 
+    now = datetime.now()
+    schedule = get_schedule(area_id,stage)
 
+    for day in schedule:
+        if len(schedule[day]) > 0:
+            #load shedding happens on this day - extract it and check date/time for future/past
+            date = datetime.strptime(day, '%Y %a, %d %b')
+            #print(date)
+            #extract the windows and work out relative position to NOW for start and then end - iterate until we find a complete match
+            i = 1
+            while i <= len(schedule[day]):
+                #this day has shedding windows so now we need to calculate it
+                # get start and end to do the maths
+                hours_until_window = 0
+                minutes_until_window = 0
+                seconds_until_window = 0
+                start_time = schedule[day][i]['start']
+                end_time = schedule[day][i]['end']
+                window_start = datetime.strptime(day + ' ' + schedule[day][i]['start'], '%Y %a, %d %b %H:%M')
+                window_end = datetime.strptime(day + ' ' + schedule[day][i]['end'], '%Y %a, %d %b %H:%M')
+                #print(now)
+                #print(window_start, window_end)
+
+                time_delta_start = window_start - now
+                time_delta_end = window_end - now
+
+                #if delta to start is negative, check delta to end greater than zero
+                # If both negative - discount it and move on
+                # if one is negative - set time to window = 0
+                # if start is positive = time to windw
+
+                if window_start > now:
+                    print("this window is in future so setting values")
+                    hours_until_window = time_delta_start.total_seconds() / 3600
+                    minutes_until_window = time_delta_start.total_seconds() / 60
+                    seconds_until_window = time_delta_start.total_seconds()
+                elif window_end > now:
+                    # set to 0 we are in the window
+                    print("this window is live so setting values to 0")
+                    hours_until_window = 0
+                    minutes_until_window = 0
+                    seconds_until_window = 0
+                else:
+                    # this is a dud window
+                    # test for this and break
+                    print("this window is in the past, iterating")
+                    hours_until_window = -1
+
+                # if hours_until_window is -1 we need to iterate, anything else breaks out
+                print(hours_until_window)
+                i += 1
+                if (hours_until_window == -1): continue
+
+                print("we reached this point now to return data")
+                result = {"date":str(date), "start_time":start_time, "end_time":end_time, "hours_to_start":hours_until_window, "minutes_to_start":minutes_until_window, "seconds_to_start":seconds_until_window}
+                return result
+                           
+        # else: no load shedding skip processing to next day
+        else:
+            continue
+        
+        # if we have data from above calculate the metrics and output it
+        
 @app.route('/')
 def index():
     return {'hello': 'world'}
@@ -90,12 +161,12 @@ def get_full_schedule_current_stage(area_id):
     return get_schedule(area_id,stage)
 
 #Gets the Next Shedding window for a given Area ID and Load Shedding Stage
-
 @app.route('/NextShedding/{area_id}/{stage}')
 def next_shedding_stage(area_id,stage):
-    return get_schedule(area_id,stage)
+    return next_shedding_window(area_id,stage)
 
 #Gets next shedding when stage is not supplied (dynamically go and get current stage)
 @app.route('/NextShedding/{area_id}')
 def next_shedding(area_id):
-    return { 'area': area_id, 'stage': get_stage()}
+    stage = str(get_stage())
+    return next_shedding_window(area_id,stage)

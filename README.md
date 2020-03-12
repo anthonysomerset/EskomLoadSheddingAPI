@@ -25,8 +25,6 @@ Gets the schedule for a given area ID in a machine readable JSON format with sta
 
 Gets the schedule for a given area ID in a machine readable JSON format with start and end times, only works for stages (1-4)
 
-## Not Yet Working but WIP
-
 * Get Next Load Shedding for "current" stage : `GET /NextShedding/{area_id}`
 
 Where area_id = the area_id as per Eskom website - more info on how to get this later but this Reference is a useful start - https://mybroadband.co.za/forum/threads/loadshedding-api.672196/page-2
@@ -35,6 +33,10 @@ Will return various values - e.g. the exact date/time, hours to go, minutes to g
 * Get Next Load Shedding for a specific stage: `GET /NextShedding/{area_id}/{stage}`
 
 Where area_id is same as above and stage is an integer reflecting the desired stage - NOTE: Eskom only appears to show stages 1-4 via their "API's" so stages 5-8 not implemented until such time as Eskom make them programatically available or we crowdsource a database much like [EskomSePush](https://sepush.co.za/) team has excellently done
+
+## Not Yet Working but WIP
+
+NONE YET
 
 ## Not Yet Started
 
